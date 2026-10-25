@@ -18,7 +18,7 @@ defineProps<{ logo: BrandLogoConfig }>();
 <style scoped>
 .brand-logo {
   position: absolute;
-  top: 3cqh;
+  top: 3cqmin;
   z-index: 2;
   max-width: 30%;
   height: auto;
@@ -26,9 +26,14 @@ defineProps<{ logo: BrandLogoConfig }>();
   pointer-events: none;
 }
 .brand-logo.top-left {
-  left: 3cqw;
+  left: 3cqmin;
 }
 .brand-logo.top-right {
-  right: 3cqw;
+  right: 3cqmin;
+}
+.brand-logo.bottom-left {
+  top: auto;
+  bottom: 3cqmin;
+  left: 3cqmin;
 }
 </style>

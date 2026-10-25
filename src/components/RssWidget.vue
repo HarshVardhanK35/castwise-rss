@@ -3,7 +3,6 @@ import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import type { FeedItem, RssAppConfig } from "../feedTypes";
 import TickerLayout from "./TickerLayout.vue";
 import SplitLayout from "./SplitLayout.vue";
-import BrandLogo from "./BrandLogo.vue";
 
 // Pure rendering component: takes a resolved config + already-fetched feed
 // items and draws the widget. Knows nothing about Ignition, postMessage,
@@ -72,22 +71,23 @@ onUnmounted(() => {
         :item="currentItem"
         :image-fit="config.imageFit"
         :speed="config.speed"
-        :accent-from="config.accentFrom"
-        :accent-to="config.accentTo"
+        :ticker-theme="config.tickerTheme"
         :item-key="index"
         :source-image="sourceImage"
+        :feed-url="config.feedUrl"
+        :brand-logo="config.brandLogo"
         @scroll-end="handleScrollEnd"
       />
       <SplitLayout
         v-else
         :item="currentItem"
         :image-fit="config.imageFit"
-        :accent-from="config.accentFrom"
-        :accent-to="config.accentTo"
         :item-key="index"
         :duration-ms="ROTATION_MS"
+        :source-image="sourceImage"
+        :feed-url="config.feedUrl"
+        :brand-logo="config.brandLogo"
       />
-      <BrandLogo :logo="config.brandLogo" />
     </template>
   </div>
 </template>

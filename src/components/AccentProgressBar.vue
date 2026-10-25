@@ -6,8 +6,6 @@
 // change, since Vue only re-triggers a CSS animation when the element
 // itself remounts.
 defineProps<{
-  accentFrom: string;
-  accentTo: string;
   itemKey: number;
   durationMs: number;
 }>();
@@ -18,10 +16,7 @@ defineProps<{
     <div
       :key="itemKey"
       class="fill"
-      :style="{
-        background: `linear-gradient(90deg, ${accentFrom}, ${accentTo})`,
-        animationDuration: `${durationMs}ms`,
-      }"
+      :style="{ animationDuration: `${durationMs}ms` }"
     />
   </div>
 </template>
@@ -36,6 +31,7 @@ defineProps<{
 .fill {
   height: 100%;
   width: 100%;
+  background: #2f81f7;
   transform-origin: left;
   animation-name: fill-grow;
   animation-timing-function: linear;

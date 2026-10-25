@@ -2,7 +2,7 @@ export interface BrandLogoConfig {
   enabled: boolean;
   contentId: string | null;
   url: string;
-  position: "top-left" | "top-right";
+  position: "top-left" | "top-right" | "bottom-left";
   size: number;
   opacity: number;
 }
@@ -15,8 +15,7 @@ export interface RssAppConfig {
   itemCount: number;
   font: string;
   speed: "slow" | "medium" | "fast";
-  accentFrom: string;
-  accentTo: string;
+  tickerTheme: "dark" | "light";
   audio: string;
   brandLogo: BrandLogoConfig;
   // Injected by DFM's AppPreviewFrame/AppRenderer, not a real settings-form

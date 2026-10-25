@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { FeedItem } from "../feedTypes";
+import type { FeedItem, BrandLogoConfig } from "../feedTypes";
+import FeedImage from "./FeedImage.vue";
+import { useSourceLabel } from "../composables/useSourceLabel";
 
 type Speed = "slow" | "medium" | "fast";
 
@@ -8,36 +10,40 @@ const props = defineProps<{
   item: FeedItem;
   imageFit: "blurred" | "bars" | "crop";
   speed: Speed;
-  accentFrom: string;
-  accentTo: string;
+  tickerTheme: "dark" | "light";
   itemKey: number;
   sourceImage: string | null;
+  feedUrl: string;
+  brandLogo: BrandLogoConfig;
 }>();
 
 const emit = defineEmits<{ "scroll-end": [] }>();
 
 const SCROLL_DURATION: Record<Speed, string> = {
-  slow: "32s",
-  medium: "20s",
-  fast: "12s",
+  slow: "45s",
+  medium: "30s",
+  fast: "15s",
 };
 
 const scrollDuration = computed(() => SCROLL_DURATION[props.speed]);
+
+const sourceLabel = useSourceLabel(() => props.feedUrl);
 </script>
 
 <template>
   <div class="ticker-layout">
     <div class="image-area">
-      <img v-if="item.image" :src="item.image" alt="" class="bg-image" :class="imageFit" />
-      <div v-else class="bg-fallback" />
-      <div v-if="imageFit === 'blurred' && item.image" class="blur-backdrop" :style="{ backgroundImage: `url(${item.image})` }" />
+      <FeedImage :item="item" :image-fit="imageFit" :brand-logo="brandLogo" />
     </div>
 
-    <div
-      class="ticker-strip"
-      :style="{ background: `linear-gradient(90deg, ${accentFrom}, ${accentTo})` }"
-    >
-      <img v-if="sourceImage" :src="sourceImage" alt="" class="source-thumb" />
+    <div class="ticker-strip" :class="tickerTheme">
+      <div
+        v-if="sourceImage"
+        class="source-thumb"
+        role="img"
+        :style="{ backgroundImage: `url(${sourceImage})` }"
+      />
+      <div v-else-if="sourceLabel" class="source-fallback">{{ sourceLabel }}</div>
 
       <div class="ticker-clip">
         <div
@@ -55,71 +61,73 @@ const scrollDuration = computed(() => SCROLL_DURATION[props.speed]);
 
 <style scoped>
 .ticker-layout {
+  position: relative;
   width: 100%;
   height: 100%;
-  display: flex;
-  flex-direction: column;
   background: #0d1117;
   overflow: hidden;
 }
 .image-area {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-.blur-backdrop {
   position: absolute;
   inset: 0;
-  background-size: cover;
-  background-position: center;
-  filter: blur(24px) brightness(0.6);
-  transform: scale(1.1);
-  z-index: 0;
-}
-.bg-image {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  height: 100%;
-}
-.bg-image.crop {
-  object-fit: cover;
-}
-.bg-image.bars {
-  object-fit: contain;
-}
-.bg-image.blurred {
-  object-fit: contain;
-}
-.bg-fallback {
-  width: 100%;
-  height: 100%;
-  background: #161b22;
+  overflow: hidden;
+  container-type: size;
 }
 .ticker-strip {
-  flex: none;
-  height: 12cqh;
-  min-height: 44px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  height: 12cqmin;
+  min-height: 38px;
   display: flex;
   align-items: center;
-  gap: 2cqw;
-  padding: 0 3cqw;
+  gap: 0;
+  padding-left: 0;
   box-sizing: border-box;
   overflow: hidden;
+}
+.ticker-strip.dark {
+  background: linear-gradient(to bottom, transparent, #0d1117 50%);
+}
+.ticker-strip.light {
+  background: linear-gradient(to bottom, transparent, #ffffff 50%);
 }
 .source-thumb {
   flex: none;
-  width: 7cqh;
-  height: 7cqh;
-  min-width: 32px;
-  min-height: 32px;
-  padding: 1cqh;
-  border-radius: 6px;
-  background: #fff;
+  width: 18cqmin;
+  height: 100%;
+  min-width: 64px;
   box-sizing: border-box;
-  object-fit: contain;
+  padding: 0.6cqmin 0;
+  background-size: contain;
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-origin: content-box;
 }
+.ticker-strip.light .source-thumb {
+  border: 1px solid rgba(13, 17, 23, 0.2);
+}
+.source-fallback {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18cqmin;
+  height: 100%;
+  min-width: 64px;
+  padding: 0 max(1cqw, 8px);
+  box-sizing: border-box;
+  background: #ffffff;
+  color: #0d1117;
+  font-weight: 700;
+  font-size: clamp(11px, 2.6cqmin, 18px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .ticker-clip {
   flex: 1;
   min-width: 0;
@@ -140,8 +148,12 @@ const scrollDuration = computed(() => SCROLL_DURATION[props.speed]);
   color: #fff;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
   font-weight: 700;
-  font-size: clamp(14px, 4.5cqh, 32px);
+  font-size: clamp(14px, 4.5cqmin, 32px);
   padding-right: 6cqw;
+}
+.ticker-strip.light .headline {
+  color: #0d1117;
+  text-shadow: none;
 }
 @keyframes scroll-left {
   from {

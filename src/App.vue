@@ -24,8 +24,7 @@ const DEFAULT_CONFIG: RssAppConfig = {
   itemCount: 5,
   font: "Inter",
   speed: "medium",
-  accentFrom: "#ff4d1c",
-  accentTo: "#ffffff",
+  tickerTheme: "dark",
   audio: "None",
   brandLogo: {
     enabled: false,
@@ -45,7 +44,7 @@ const REFRESH_MS: Record<RssAppConfig["refresh"], number> = {
 };
 
 const appConfig = ref<RssAppConfig>(DEFAULT_CONFIG);
-const status = ref<"loading" | "ready" | "error">("loading");
+const status = ref<"loading" | "ready" | "error" | "no-url" | "invalid-url">("loading");
 const items = ref<FeedItem[]>([]);
 const sourceImage = ref<string | null>(null);
 let refreshTimer: ReturnType<typeof setInterval> | null = null;
@@ -107,7 +106,25 @@ async function loadFeed() {
   // empty state instead of calling Ignition with an invalid proxy URL.
   if (!appConfig.value.feedUrl) {
     log(hasLoadedOnce ? "config changed — no feed URL set" : "no feed URL set yet");
-    status.value = "ready";
+    status.value = "no-url";
+    items.value = [];
+    sourceImage.value = null;
+    if (!hasLoadedOnce) {
+      hasLoadedOnce = true;
+      window.parent?.postMessage({ type: "APP_LOAD" }, "*");
+    }
+    return;
+  }
+
+  let isValidUrl = true;
+  try {
+    new URL(appConfig.value.feedUrl);
+  } catch {
+    isValidUrl = false;
+  }
+  if (!isValidUrl) {
+    log("feed URL is not a valid URL — showing invalid-url state");
+    status.value = "invalid-url";
     items.value = [];
     sourceImage.value = null;
     if (!hasLoadedOnce) {
@@ -175,6 +192,8 @@ onUnmounted(() => {
     :items="items"
     :source-image="sourceImage"
   />
+  <div v-else-if="status === 'no-url'" class="state-message">Enter a feed URL in settings.</div>
+  <div v-else-if="status === 'invalid-url'" class="state-message">This doesn't look like a valid URL.</div>
   <div v-else-if="status === 'error'" class="state-message">Couldn't load this feed.</div>
 </template>
 
