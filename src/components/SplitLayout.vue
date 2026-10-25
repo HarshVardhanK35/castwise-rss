@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import type { FeedItem } from "../feedTypes";
+import type { FeedItem, BrandLogoConfig } from "../feedTypes";
 import AccentProgressBar from "./AccentProgressBar.vue";
+import FeedImage from "./FeedImage.vue";
+import { useSourceLabel } from "../composables/useSourceLabel";
 
-defineProps<{
+const props = defineProps<{
   item: FeedItem;
   imageFit: "blurred" | "bars" | "crop";
-  accentFrom: string;
-  accentTo: string;
   itemKey: number;
   durationMs: number;
+  sourceImage: string | null;
+  feedUrl: string;
+  brandLogo: BrandLogoConfig;
 }>();
 
 // Relative time (e.g. "7 hours ago") — same idea as the approved mock's
@@ -24,32 +27,34 @@ function timeAgo(pubDate: string): string {
   const days = Math.floor(hours / 24);
   return `${days} day${days === 1 ? "" : "s"} ago`;
 }
+
+const sourceLabel = useSourceLabel(() => props.feedUrl);
 </script>
 
 <template>
   <div class="split-layout">
     <div class="image-area">
-      <img v-if="item.image" :src="item.image" alt="" class="bg-image" :class="imageFit" />
-      <div v-else class="bg-fallback" />
-      <div
-        v-if="imageFit === 'blurred' && item.image"
-        class="blur-backdrop"
-        :style="{ backgroundImage: `url(${item.image})` }"
-      />
+      <FeedImage :item="item" :image-fit="imageFit" :brand-logo="brandLogo" />
     </div>
 
     <div class="text-panel">
       <div class="meta-row">
+        <div
+          v-if="sourceImage"
+          class="source-thumb"
+          role="img"
+          :style="{ backgroundImage: `url(${sourceImage})` }"
+        />
+        <span v-else-if="sourceLabel" class="source-fallback">{{ sourceLabel }}</span>
+        <span v-else />
+
         <span v-if="item.pubDate" class="timestamp">{{ timeAgo(item.pubDate) }}</span>
       </div>
-      <h1 class="headline">{{ item.title }}</h1>
-      <p v-if="item.description" class="description">{{ item.description }}</p>
-      <AccentProgressBar
-        :accent-from="accentFrom"
-        :accent-to="accentTo"
-        :item-key="itemKey"
-        :duration-ms="durationMs"
-      />
+      <div class="content-group">
+        <h1 class="headline">{{ item.title }}</h1>
+        <p v-if="item.description" class="description">{{ item.description }}</p>
+      </div>
+      <AccentProgressBar :item-key="itemKey" :duration-ms="durationMs" />
     </div>
   </div>
 </template>
@@ -59,55 +64,70 @@ function timeAgo(pubDate: string): string {
   width: 100%;
   height: 100%;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   background: #0d1117;
   overflow: hidden;
 }
 .image-area {
   position: relative;
-  flex: 1;
-  min-height: 0;
+  flex: 1.4;
+  min-width: 0;
   overflow: hidden;
+  container-type: size;
 }
-.blur-backdrop {
-  position: absolute;
-  inset: 0;
-  background-size: cover;
-  background-position: center;
-  filter: blur(24px) brightness(0.6);
-  transform: scale(1.1);
-  z-index: 0;
-}
-.bg-image {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  height: 100%;
-}
-.bg-image.crop {
-  object-fit: cover;
-}
-.bg-image.bars,
-.bg-image.blurred {
-  object-fit: contain;
-}
-.bg-fallback {
-  width: 100%;
-  height: 100%;
-  background: #161b22;
+/* Tablet (4/3) and mobile (9/16) both stack image-on-top/text-below in the
+   approved mock — only desktop's wide 16/9 aspect keeps the side-by-side
+   row. Matched on the widget's own aspect ratio (container query), not a
+   pixel breakpoint, since this widget's real rendered size can vary
+   independent of which preview preset picked the aspect. */
+@container (max-aspect-ratio: 4/3) {
+  .split-layout {
+    flex-direction: column;
+  }
+  .image-area {
+    flex: 1;
+    min-height: 0;
+  }
 }
 .text-panel {
-  flex: none;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   gap: 2cqh;
-  padding: 4cqw 5cqw;
+  padding: 3cqh 3.5cqw 4cqw;
   background: #0d1117;
   box-sizing: border-box;
 }
 .meta-row {
+  flex: none;
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2cqw;
+}
+.source-thumb {
+  flex: none;
+  width: 16cqmin;
+  height: 7cqh;
+  min-width: 56px;
+  min-height: 20px;
+  background-size: contain;
+  background-position: left center;
+  background-repeat: no-repeat;
+}
+.source-fallback {
+  flex: none;
+  color: #e6edf3;
+  font-weight: 700;
+  font-size: clamp(11px, 2.4cqh, 16px);
+}
+.content-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5cqh;
 }
 .timestamp {
   color: #8b949e;
@@ -125,9 +145,5 @@ function timeAgo(pubDate: string): string {
   color: #8b949e;
   line-height: 1.5;
   font-size: clamp(12px, 2.6cqh, 18px);
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 </style>
