@@ -83,6 +83,12 @@ function applyResult(data: unknown) {
   sourceImage.value = result?.sourceImage ?? null;
   status.value = "ready";
   log(`rendered ${feedItems.length} items`);
+
+  const withImage = feedItems.filter((item) => item.image).length;
+  log(
+    `images: ${withImage}/${feedItems.length} items have one, sourceImage ${sourceImage.value ? "present" : "none"}`,
+    { sourceImage: sourceImage.value, perItem: feedItems.map((item) => ({ title: item.title, image: item.image })) },
+  );
 }
 
 function resetRefreshTimer() {
@@ -104,15 +110,16 @@ function resetRefreshTimer() {
 async function loadFeed() {
   // No feed URL configured yet — nothing to fetch, show the widget's own
   // empty state instead of calling Ignition with an invalid proxy URL.
+  // Resolves synchronously, so no APP_LOADING spinner — just the final
+  // APP_LOAD, every time (not just the first), so a feed URL cleared
+  // after a real load correctly clears DFM's own spinner state too.
   if (!appConfig.value.feedUrl) {
     log(hasLoadedOnce ? "config changed — no feed URL set" : "no feed URL set yet");
     status.value = "no-url";
     items.value = [];
     sourceImage.value = null;
-    if (!hasLoadedOnce) {
-      hasLoadedOnce = true;
-      window.parent?.postMessage({ type: "APP_LOAD" }, "*");
-    }
+    hasLoadedOnce = true;
+    window.parent?.postMessage({ type: "APP_LOAD" }, "*");
     return;
   }
 
@@ -127,14 +134,20 @@ async function loadFeed() {
     status.value = "invalid-url";
     items.value = [];
     sourceImage.value = null;
-    if (!hasLoadedOnce) {
-      hasLoadedOnce = true;
-      window.parent?.postMessage({ type: "APP_LOAD" }, "*");
-    }
+    hasLoadedOnce = true;
+    window.parent?.postMessage({ type: "APP_LOAD" }, "*");
     return;
   }
 
   log(hasLoadedOnce ? "config changed — reloading" : "loading for the first time");
+  // Only on a RELOAD (not the very first load) — DFM's own preview frame
+  // already shows its spinner by default until the first APP_LOAD, so
+  // this is specifically what makes a later reload (e.g. a new Feed URL +
+  // Load) show that same spinner again instead of just sitting on stale
+  // content until the new data replaces it.
+  if (hasLoadedOnce) {
+    window.parent?.postMessage({ type: "APP_LOADING" }, "*");
+  }
   const requestId = ++latestRequestId;
   const payload = hasLoadedOnce
     ? await updateConfig(buildIgnitionConfig(appConfig.value))
@@ -145,10 +158,11 @@ async function loadFeed() {
   }
   applyResult(payload.data);
 
-  if (!hasLoadedOnce) {
-    hasLoadedOnce = true;
-    log("posting APP_LOAD to parent");
-    window.parent?.postMessage({ type: "APP_LOAD" }, "*");
+  const firstLoad = !hasLoadedOnce;
+  hasLoadedOnce = true;
+  log("posting APP_LOAD to parent");
+  window.parent?.postMessage({ type: "APP_LOAD" }, "*");
+  if (firstLoad) {
     console.info(`[RSS | E${IGNITION_VERSION}] bootstrap:mounted`, {
       embedded: window.parent !== window,
       hasHostConfig: usedHostConfig,

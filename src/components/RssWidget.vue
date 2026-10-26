@@ -23,6 +23,14 @@ const props = defineProps<{
 const ROTATION_MS = 8000;
 
 const index = ref(0);
+// Separate from `index` on purpose — `index` can legitimately reset to the
+// same numeric value it already held (e.g. a settings edit while already on
+// item 0), which is a no-op `:key` change and leaves a stale CSS animation
+// (Ticker's scroll, Split's progress bar) running from wherever it was.
+// `rotationToken` increments on every reset *event*, not every value
+// change, so it always forces a remount — same fix as `DevicePlayback.jsx`'s
+// `itemStartedAt` for the identical class of bug.
+const rotationToken = ref(0);
 let timer: ReturnType<typeof setInterval> | null = null;
 
 const rotationItems = computed(() => props.items.slice(0, Math.max(1, props.config.itemCount)));
@@ -31,10 +39,12 @@ const currentItem = computed(() => rotationItems.value[index.value] ?? null);
 function advance() {
   if (rotationItems.value.length === 0) return;
   index.value = (index.value + 1) % rotationItems.value.length;
+  rotationToken.value++;
 }
 
 function startSplitRotation() {
   if (timer) clearInterval(timer);
+  rotationToken.value++;
   if (props.config.layout !== "split" || rotationItems.value.length <= 1) return;
   timer = setInterval(advance, ROTATION_MS);
 }
@@ -72,7 +82,7 @@ onUnmounted(() => {
         :image-fit="config.imageFit"
         :speed="config.speed"
         :ticker-theme="config.tickerTheme"
-        :item-key="index"
+        :item-key="rotationToken"
         :source-image="sourceImage"
         :feed-url="config.feedUrl"
         :brand-logo="config.brandLogo"
@@ -82,7 +92,7 @@ onUnmounted(() => {
         v-else
         :item="currentItem"
         :image-fit="config.imageFit"
-        :item-key="index"
+        :item-key="rotationToken"
         :duration-ms="ROTATION_MS"
         :source-image="sourceImage"
         :feed-url="config.feedUrl"
