@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import type { FeedItem, BrandLogoConfig } from "../feedTypes";
 import AccentProgressBar from "./AccentProgressBar.vue";
 import FeedImage from "./FeedImage.vue";
 import { useSourceLabel } from "../composables/useSourceLabel";
+import { useImageProbe } from "../composables/useImageProbe";
 
 const props = defineProps<{
   item: FeedItem;
@@ -29,21 +31,29 @@ function timeAgo(pubDate: string): string {
 }
 
 const sourceLabel = useSourceLabel(() => props.feedUrl);
+const { ok: sourceImageOk, ratio: sourceImageRatio } = useImageProbe(() => props.sourceImage);
+const sourceThumbRatio = computed(() => sourceImageRatio.value ?? 3);
 </script>
 
 <template>
   <div class="split-layout">
     <div class="image-area">
-      <FeedImage :item="item" :image-fit="imageFit" :brand-logo="brandLogo" />
+      <FeedImage
+        :item="item"
+        :image-fit="imageFit"
+        :brand-logo="brandLogo"
+        :source-image="sourceImage"
+        :feed-url="feedUrl"
+      />
     </div>
 
     <div class="text-panel">
       <div class="meta-row">
         <div
-          v-if="sourceImage"
+          v-if="sourceImage && sourceImageOk"
           class="source-thumb"
           role="img"
-          :style="{ backgroundImage: `url(${sourceImage})` }"
+          :style="{ backgroundImage: `url(${sourceImage})`, aspectRatio: String(sourceThumbRatio) }"
         />
         <span v-else-if="sourceLabel" class="source-fallback">{{ sourceLabel }}</span>
         <span v-else />
@@ -110,12 +120,29 @@ const sourceLabel = useSourceLabel(() => props.feedUrl);
 }
 .source-thumb {
   flex: none;
-  width: 16cqmin;
+  /* Height fixed, width follows the logo's own aspect ratio with no cap —
+     a max-width + auto-height "mutual fit" was tried and came out wrong
+     in practice (shrank a wide logo's height to a sliver to stay under
+     the cap). No cap needed: `.meta-row` just gives the timestamp
+     whatever room is left. */
   height: 7cqh;
-  min-width: 56px;
+  width: auto;
+  min-width: 48px;
   min-height: 20px;
-  background-size: contain;
-  background-position: left center;
+  box-sizing: border-box;
+  padding: 0.8cqh 1cqw;
+  /* Backing sized to the logo's own aspect ratio (via inline `aspectRatio`
+     style, not a fixed box) — an opaque logo covers it edge-to-edge with
+     no visible margin, a transparent dark-on-nothing logo (e.g. the New
+     York Times') still shows up against this panel's dark background. */
+  background-color: #f4f4f2;
+  /* `cover`, not `contain` — the box is already sized to the logo's exact
+     aspect ratio, so the two should look identical, but `contain` rounds
+     down on a sub-pixel ratio mismatch and leaves a hairline gap of the
+     backing color showing on one edge. `cover` rounds the other way
+     (crops an imperceptible hairline instead), which never leaves a gap. */
+  background-size: cover;
+  background-position: center center;
   background-repeat: no-repeat;
 }
 .source-fallback {
