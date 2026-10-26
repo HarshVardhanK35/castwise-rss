@@ -29,10 +29,24 @@ const sourceLabel = useSourceLabel(() => props.feedUrl);
 </script>
 
 <template>
-  <img v-if="item.image" :src="item.image" alt="" class="bg-image" :class="imageFit" />
+  <!-- `:key` forces a fresh DOM element whenever the image URL changes
+       (feed switch or normal rotation), instead of Vue patching `src` on
+       the SAME element — browsers keep showing the previous bitmap on a
+       reused element until the new `src` finishes loading, which is
+       exactly what looked like "the old feed's image is leaking into the
+       new one" (confirmed via timestamped logs: the data/DOM were already
+       correct, only this element's own network load was lagging behind). -->
+  <img
+    v-if="item.image"
+    :key="item.image"
+    :src="item.image"
+    alt=""
+    class="bg-image"
+    :class="imageFit"
+  />
   <div v-else-if="sourceImage && sourceImageOk" class="bg-fallback logo-fallback">
     <div class="fallback-logo-card">
-      <img :src="sourceImage" alt="" class="fallback-logo" />
+      <img :key="sourceImage" :src="sourceImage ?? undefined" alt="" class="fallback-logo" />
     </div>
   </div>
   <div v-else class="bg-fallback icon-fallback">
@@ -45,6 +59,7 @@ const sourceLabel = useSourceLabel(() => props.feedUrl);
   </div>
   <div
     v-if="imageFit === 'blurred' && item.image"
+    :key="item.image"
     class="blur-backdrop"
     :style="{ backgroundImage: `url(${item.image})` }"
   />
