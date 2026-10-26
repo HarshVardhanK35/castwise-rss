@@ -9,6 +9,7 @@ import { useImageProbe } from "../composables/useImageProbe";
 const props = defineProps<{
   item: FeedItem;
   imageFit: "blurred" | "bars" | "crop";
+  tickerTheme: "dark" | "light";
   itemKey: number;
   durationMs: number;
   sourceImage: string | null;
@@ -47,7 +48,7 @@ const sourceThumbRatio = computed(() => sourceImageRatio.value ?? 3);
       />
     </div>
 
-    <div class="text-panel">
+    <div class="text-panel" :class="tickerTheme">
       <div class="meta-row">
         <div
           v-if="sourceImage && sourceImageOk"
@@ -64,7 +65,7 @@ const sourceThumbRatio = computed(() => sourceImageRatio.value ?? 3);
         <h1 class="headline">{{ item.title }}</h1>
         <p v-if="item.description" class="description">{{ item.description }}</p>
       </div>
-      <AccentProgressBar :item-key="itemKey" :duration-ms="durationMs" />
+      <AccentProgressBar :item-key="itemKey" :duration-ms="durationMs" :ticker-theme="tickerTheme" />
     </div>
   </div>
 </template>
@@ -111,6 +112,12 @@ const sourceThumbRatio = computed(() => sourceImageRatio.value ?? 3);
   background: #0d1117;
   box-sizing: border-box;
 }
+/* Same "Theme" setting TickerLayout's strip already uses — was Ticker-only
+   (the field was hidden whenever Layout was Split), so Split always
+   rendered dark regardless of this setting until now. */
+.text-panel.light {
+  background: #ffffff;
+}
 .meta-row {
   flex: none;
   display: flex;
@@ -151,6 +158,9 @@ const sourceThumbRatio = computed(() => sourceImageRatio.value ?? 3);
   font-weight: 700;
   font-size: clamp(11px, 2.4cqh, 16px);
 }
+.text-panel.light .source-fallback {
+  color: #0d1117;
+}
 .content-group {
   display: flex;
   flex-direction: column;
@@ -160,6 +170,9 @@ const sourceThumbRatio = computed(() => sourceImageRatio.value ?? 3);
   color: #8b949e;
   font-size: clamp(11px, 2.4cqh, 16px);
 }
+.text-panel.light .timestamp {
+  color: #52514e;
+}
 .headline {
   margin: 0;
   color: #e6edf3;
@@ -167,10 +180,16 @@ const sourceThumbRatio = computed(() => sourceImageRatio.value ?? 3);
   line-height: 1.2;
   font-size: clamp(16px, 4.5cqh, 34px);
 }
+.text-panel.light .headline {
+  color: #0d1117;
+}
 .description {
   margin: 0;
   color: #8b949e;
   line-height: 1.5;
   font-size: clamp(12px, 2.6cqh, 18px);
+}
+.text-panel.light .description {
+  color: #52514e;
 }
 </style>

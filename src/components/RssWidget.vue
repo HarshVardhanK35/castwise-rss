@@ -92,6 +92,7 @@ onUnmounted(() => {
         v-else
         :item="currentItem"
         :image-fit="config.imageFit"
+        :ticker-theme="config.tickerTheme"
         :item-key="rotationToken"
         :duration-ms="ROTATION_MS"
         :source-image="sourceImage"

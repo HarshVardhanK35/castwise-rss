@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, nextTick } from "vue";
 import { init, updateConfig, watchHostConfig, VERSION as IGNITION_VERSION } from "@castwise/ignition";
 import type { RssAppConfig, FeedItem } from "./feedTypes";
 import { buildFeedProxyUrl } from "./feedApi";
@@ -69,7 +69,7 @@ function buildIgnitionConfig(c: RssAppConfig) {
   };
 }
 
-function applyResult(data: unknown) {
+async function applyResult(data: unknown) {
   const result = data as { items?: FeedItem[]; sourceImage?: string | null } | null;
   const feedItems = result?.items ?? null;
   if (!feedItems) {
@@ -89,6 +89,10 @@ function applyResult(data: unknown) {
     `images: ${withImage}/${feedItems.length} items have one, sourceImage ${sourceImage.value ? "present" : "none"}`,
     { sourceImage: sourceImage.value, perItem: feedItems.map((item) => ({ title: item.title, image: item.image })) },
   );
+
+  // Awaited by callers before posting APP_LOAD — setting the refs above
+  // only SCHEDULES a DOM patch, doesn't block on one.
+  await nextTick();
 }
 
 function resetRefreshTimer() {
@@ -103,7 +107,7 @@ function resetRefreshTimer() {
       log("refresh result superseded by a newer request — discarding");
       return;
     }
-    applyResult(updated.data);
+    await applyResult(updated.data);
   }, REFRESH_MS[appConfig.value.refresh]);
 }
 
@@ -156,7 +160,11 @@ async function loadFeed() {
     log("load result superseded by a newer request — discarding");
     return;
   }
-  applyResult(payload.data);
+  // Awaited — posting APP_LOAD before Vue has actually patched the DOM
+  // with the new data (setting a ref only SCHEDULES a patch, it doesn't
+  // block on one) would un-hide DFM's iframe while it still showed the
+  // previous render.
+  await applyResult(payload.data);
 
   const firstLoad = !hasLoadedOnce;
   hasLoadedOnce = true;

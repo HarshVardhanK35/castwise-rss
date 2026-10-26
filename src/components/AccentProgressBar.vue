@@ -8,11 +8,12 @@
 defineProps<{
   itemKey: number;
   durationMs: number;
+  tickerTheme?: "dark" | "light";
 }>();
 </script>
 
 <template>
-  <div class="track">
+  <div class="track" :class="tickerTheme">
     <div
       :key="itemKey"
       class="fill"
@@ -27,6 +28,11 @@ defineProps<{
   height: 3px;
   background: rgba(255, 255, 255, 0.12);
   overflow: hidden;
+}
+/* A faint white-tinted track is invisible on a light panel — same color,
+   opposite problem as the dark panel it was designed for. */
+.track.light {
+  background: rgba(13, 17, 23, 0.12);
 }
 .fill {
   height: 100%;
