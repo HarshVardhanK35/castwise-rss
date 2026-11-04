@@ -134,8 +134,8 @@ const sourceThumbRatio = computed(() => sourceImageRatio.value ?? 3);
      whatever room is left. */
   height: 7cqh;
   width: auto;
-  min-width: 48px;
-  min-height: 20px;
+  min-width: 24px;
+  min-height: 10px;
   box-sizing: border-box;
   padding: 0.8cqh 1cqw;
   /* Backing sized to the logo's own aspect ratio (via inline `aspectRatio`
@@ -156,7 +156,7 @@ const sourceThumbRatio = computed(() => sourceImageRatio.value ?? 3);
   flex: none;
   color: #e6edf3;
   font-weight: 700;
-  font-size: clamp(11px, 2.4cqh, 16px);
+  font-size: clamp(6px, 2.4cqh, 16px);
 }
 .text-panel.light .source-fallback {
   color: #0d1117;
@@ -168,7 +168,7 @@ const sourceThumbRatio = computed(() => sourceImageRatio.value ?? 3);
 }
 .timestamp {
   color: #8b949e;
-  font-size: clamp(11px, 2.4cqh, 16px);
+  font-size: clamp(6px, 2.4cqh, 16px);
 }
 .text-panel.light .timestamp {
   color: #52514e;
@@ -178,7 +178,7 @@ const sourceThumbRatio = computed(() => sourceImageRatio.value ?? 3);
   color: #e6edf3;
   font-weight: 700;
   line-height: 1.2;
-  font-size: clamp(16px, 4.5cqh, 34px);
+  font-size: clamp(8px, 4.5cqh, 34px);
 }
 .text-panel.light .headline {
   color: #0d1117;
@@ -187,7 +187,7 @@ const sourceThumbRatio = computed(() => sourceImageRatio.value ?? 3);
   margin: 0;
   color: #8b949e;
   line-height: 1.5;
-  font-size: clamp(12px, 2.6cqh, 18px);
+  font-size: clamp(6px, 2.6cqh, 18px);
 }
 .text-panel.light .description {
   color: #52514e;
