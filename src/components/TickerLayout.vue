@@ -52,7 +52,7 @@ const sourceThumbRatio = computed(() => sourceImageRatio.value ?? 3);
         v-if="sourceImage && sourceImageOk"
         class="source-thumb"
         role="img"
-        :style="{ backgroundImage: `url(${sourceImage})`, aspectRatio: String(sourceThumbRatio) }"
+        :style="{ backgroundImage: `url(${sourceImage})`, aspectRatio: String(sourceThumbRatio), '--thumb-ratio': String(sourceThumbRatio) }"
       />
       <div v-else-if="sourceLabel" class="source-fallback"><span>{{ sourceLabel }}</span></div>
 
@@ -131,6 +131,12 @@ const sourceThumbRatio = computed(() => sourceImageRatio.value ?? 3);
   background-position: center center;
   background-repeat: no-repeat;
   background-origin: content-box;
+}
+/* A browser without aspect-ratio (Chromium before 88): the width is worked out from the logo's ratio. */
+@supports not (aspect-ratio: 1) {
+  .source-thumb {
+    width: calc(max(8cqmin, 28px) * var(--thumb-ratio, 1));
+  }
 }
 .ticker-strip.light .source-thumb {
   border: 1px solid rgba(13, 17, 23, 0.2);
