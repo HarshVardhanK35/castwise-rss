@@ -98,7 +98,8 @@ async function applyResult(data: unknown) {
   items.value = feedItems;
   sourceImage.value = result?.sourceImage ?? null;
   status.value = "ready";
-  announceImages(feedItems, sourceImage.value);
+  // only the items the widget actually rotates through (its Items setting), not the whole feed
+  announceImages(feedItems.slice(0, Math.max(1, appConfig.value.itemCount)), sourceImage.value);
   log(`rendered ${feedItems.length} items`);
 
   const withImage = feedItems.filter((item) => item.image).length;
