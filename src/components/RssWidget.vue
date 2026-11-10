@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import type { FeedItem, RssAppConfig } from "../feedTypes";
 import TickerLayout from "./TickerLayout.vue";
 import SplitLayout from "./SplitLayout.vue";
+import { preloadImages } from "../composables/useImagePreload";
 
 // Pure rendering component: takes a resolved config + already-fetched feed
 // items and draws the widget. Knows nothing about Ignition, postMessage,
@@ -64,6 +65,18 @@ watch(
   },
 );
 watch(() => props.config.layout, startSplitRotation);
+
+// While an item is on screen the pictures of the next two are loaded and decoded, so each one
+// appears whole when its turn comes (a slow TV otherwise shows a black gap while it loads).
+watch(
+  [index, rotationItems],
+  () => {
+    const items = rotationItems.value;
+    if (items.length === 0) return;
+    preloadImages([items[index.value]?.image, items[(index.value + 1) % items.length]?.image, items[(index.value + 2) % items.length]?.image]);
+  },
+  { immediate: true },
+);
 
 onMounted(startSplitRotation);
 onUnmounted(() => {
