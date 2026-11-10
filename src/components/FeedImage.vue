@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, ref } from "vue";
 import type { FeedItem, BrandLogoConfig } from "../feedTypes";
 import BrandLogo from "./BrandLogo.vue";
 import { useImageProbe } from "../composables/useImageProbe";
@@ -26,6 +27,15 @@ const props = defineProps<{
 // (Bloomberg again — its advertised logo URL 404s on their own server).
 const { ok: sourceImageOk } = useImageProbe(() => props.sourceImage);
 const sourceLabel = useSourceLabel(() => props.feedUrl);
+
+// An item's picture that cannot be loaded (the screen is offline and the picture was not saved,
+// or the news site no longer has it) is treated like an item with no picture: the channel logo
+// or the icon and label take its place, never an empty black box.
+const failedImages = ref<string[]>([]);
+const hasImage = computed(() => !!props.item.image && !failedImages.value.includes(props.item.image));
+function imageFailed() {
+  if (props.item.image && !failedImages.value.includes(props.item.image)) failedImages.value.push(props.item.image);
+}
 </script>
 
 <template>
@@ -37,12 +47,13 @@ const sourceLabel = useSourceLabel(() => props.feedUrl);
        new one" (confirmed via timestamped logs: the data/DOM were already
        correct, only this element's own network load was lagging behind). -->
   <img
-    v-if="item.image"
+    v-if="item.image && hasImage"
     :key="item.image"
     :src="item.image"
     alt=""
     class="bg-image"
     :class="imageFit"
+    @error="imageFailed"
   />
   <div v-else-if="sourceImage && sourceImageOk" class="bg-fallback logo-fallback">
     <div class="fallback-logo-card">
@@ -58,7 +69,7 @@ const sourceLabel = useSourceLabel(() => props.feedUrl);
     <span v-if="sourceLabel" class="fallback-label">{{ sourceLabel }}</span>
   </div>
   <div
-    v-if="imageFit === 'blurred' && item.image"
+    v-if="imageFit === 'blurred' && item.image && hasImage"
     :key="item.image"
     class="blur-backdrop"
     :style="{ backgroundImage: `url(${item.image})` }"

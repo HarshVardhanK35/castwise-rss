@@ -69,6 +69,22 @@ function buildIgnitionConfig(c: RssAppConfig) {
   };
 }
 
+// Tells the player which pictures this feed uses, so a screen can save them while it is online
+// and still show them with no internet (the player saves each one under its own address, and its
+// service worker serves the saved copy when the page asks for that address). At most 20.
+const MAX_ANNOUNCED_IMAGES = 20;
+function announceImages(feedItems: FeedItem[], logo: string | null) {
+  if (window.parent === window) return;
+  const urls: string[] = [];
+  for (const url of [logo, ...feedItems.map((item) => item.image)]) {
+    if (url && /^https?:\/\//i.test(url) && !urls.includes(url)) urls.push(url);
+    if (urls.length >= MAX_ANNOUNCED_IMAGES) break;
+  }
+  if (urls.length === 0) return;
+  log(`telling the player about ${urls.length} picture(s) to save for offline`);
+  window.parent.postMessage({ type: "APP_ASSETS", images: urls }, "*");
+}
+
 async function applyResult(data: unknown) {
   const result = data as { items?: FeedItem[]; sourceImage?: string | null } | null;
   const feedItems = result?.items ?? null;
@@ -82,6 +98,7 @@ async function applyResult(data: unknown) {
   items.value = feedItems;
   sourceImage.value = result?.sourceImage ?? null;
   status.value = "ready";
+  announceImages(feedItems, sourceImage.value);
   log(`rendered ${feedItems.length} items`);
 
   const withImage = feedItems.filter((item) => item.image).length;
