@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import type { FeedItem, BrandLogoConfig } from "../feedTypes";
 import BrandLogo from "./BrandLogo.vue";
 import { useImageProbe } from "../composables/useImageProbe";
 import { useSourceLabel } from "../composables/useSourceLabel";
+import { loadImage } from "../composables/useImagePreload";
 
 // The current item's background image (or fallback) + optional blurred
 // backdrop + the brand-logo overlay — identical markup/CSS previously
@@ -32,29 +33,64 @@ const sourceLabel = useSourceLabel(() => props.feedUrl);
 // or the news site no longer has it) is treated like an item with no picture: the channel logo
 // or the icon and label take its place, never an empty black box.
 const failedImages = ref<string[]>([]);
-const hasImage = computed(() => !!props.item.image && !failedImages.value.includes(props.item.image));
-function imageFailed() {
-  if (props.item.image && !failedImages.value.includes(props.item.image)) failedImages.value.push(props.item.image);
+function imageFailed(url: string) {
+  if (!failedImages.value.includes(url)) failedImages.value.push(url);
 }
+
+// The picture on screen. A new item's picture is loaded and decoded first (RssWidget already
+// started that for the next items, so it is usually ready at once) and swapped in only when it is
+// ready: the previous picture stays up meanwhile, so there is no black gap between items.
+const shown = ref<string | null>(null);
+let latest = 0;
+watch(
+  () => props.item.image,
+  (url) => {
+    const mine = ++latest;
+    if (!url || failedImages.value.includes(url)) {
+      shown.value = null;
+      return;
+    }
+    if (url === shown.value) return;
+    loadImage(url).then((ok) => {
+      if (mine !== latest) return; // a newer item came up meanwhile
+      if (ok) {
+        shown.value = url;
+      } else {
+        imageFailed(url);
+        shown.value = null;
+      }
+    });
+  },
+  { immediate: true },
+);
+
+function shownFailed() {
+  if (shown.value) imageFailed(shown.value);
+  shown.value = null;
+}
+
+// Still loading the first picture of an item: a plain dark box (no logo flash) until it is ready.
+const waiting = computed(
+  () => !!props.item.image && !shown.value && !failedImages.value.includes(props.item.image),
+);
 </script>
 
 <template>
   <!-- `:key` forces a fresh DOM element whenever the image URL changes
        (feed switch or normal rotation), instead of Vue patching `src` on
        the SAME element — browsers keep showing the previous bitmap on a
-       reused element until the new `src` finishes loading, which is
-       exactly what looked like "the old feed's image is leaking into the
-       new one" (confirmed via timestamped logs: the data/DOM were already
-       correct, only this element's own network load was lagging behind). -->
+       reused element until the new `src` finishes loading. The new picture is already
+       decoded by the time it is swapped in (see the watcher above). -->
   <img
-    v-if="item.image && hasImage"
-    :key="item.image"
-    :src="item.image"
+    v-if="shown"
+    :key="shown"
+    :src="shown"
     alt=""
     class="bg-image"
     :class="imageFit"
-    @error="imageFailed"
+    @error="shownFailed"
   />
+  <div v-else-if="waiting" class="bg-fallback" />
   <div v-else-if="sourceImage && sourceImageOk" class="bg-fallback logo-fallback">
     <div class="fallback-logo-card">
       <img :key="sourceImage" :src="sourceImage ?? undefined" alt="" class="fallback-logo" />
@@ -69,10 +105,10 @@ function imageFailed() {
     <span v-if="sourceLabel" class="fallback-label">{{ sourceLabel }}</span>
   </div>
   <div
-    v-if="imageFit === 'blurred' && item.image && hasImage"
-    :key="item.image"
+    v-if="imageFit === 'blurred' && shown"
+    :key="shown"
     class="blur-backdrop"
-    :style="{ backgroundImage: `url(${item.image})` }"
+    :style="{ backgroundImage: `url(${shown})` }"
   />
   <BrandLogo :logo="brandLogo" />
 </template>
